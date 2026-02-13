@@ -153,12 +153,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     backgroundColor: colors.accent,
-    paddingVertical: 10,
+    paddingVertical: 14,
     paddingHorizontal: 14,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
+  
   primaryBtnText: { color: "#fff", ...typography.bold },
 
   empty: { marginTop: 20, color: colors.muted, ...typography.body },
