@@ -49,7 +49,7 @@ export default function AppTabs() {
           <Tab.Screen
             name="ManageTab"
             component={ManageStack}
-            options={{ title: "Gerenciar" }}
+            options={{ title: "Dashboard" }}
           />
           <Tab.Screen
             name="AdminTab"

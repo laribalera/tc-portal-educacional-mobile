@@ -1,8 +1,19 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, FlatList, Pressable, Alert, ActivityIndicator, StyleSheet } from "react-native";
+import React, { useMemo, useState, useCallback } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+
+import { colors, typography } from "../theme";
 
 export default function ManagePostsScreen({ navigation }) {
   const { professor } = useAuth();
@@ -16,7 +27,6 @@ export default function ManagePostsScreen({ navigation }) {
       const raw = data?.posts ?? data;
       const list = Array.isArray(raw) ? raw : [];
       setPosts(list);
-
     } catch (e) {
       console.log("Erro manage posts:", e?.response?.data || e?.message);
       Alert.alert("Erro", "Não consegui carregar seus posts.");
@@ -31,7 +41,6 @@ export default function ManagePostsScreen({ navigation }) {
       load();
     }, [])
   );
-
 
   const myPosts = useMemo(() => {
     const myId = professor?._id || professor?.id;
@@ -55,7 +64,7 @@ export default function ManagePostsScreen({ navigation }) {
             await load();
           } catch (e) {
             console.log("Erro delete:", e?.response?.data || e?.message);
-            Alert.alert("Erro", "Não consegui deletar. Verifique se o backend tem DELETE /api/posts/:id.");
+            Alert.alert("Erro", "Não foi possível deletar o post.");
           }
         },
       },
@@ -65,33 +74,42 @@ export default function ManagePostsScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      {/* Botão Novo Post */}
       <Pressable
         onPress={() => navigation.navigate("PostForm", { mode: "create" })}
         style={styles.primaryBtn}
       >
-        <Text style={styles.primaryBtnText}>+ Novo post</Text>
+        <Ionicons name="add-circle-outline" size={20} color="#fff" />
+        <Text style={styles.primaryBtnText}>Novo post</Text>
       </Pressable>
 
       <FlatList
         data={myPosts}
         keyExtractor={(item, idx) => String(item?._id ?? idx)}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        contentContainerStyle={{ paddingVertical: 12 }}
+        ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
+        contentContainerStyle={{ paddingVertical: 16 }}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.title} numberOfLines={2}>{item.titulo || "Sem título"}</Text>
-            <Text style={styles.subtitle} numberOfLines={2}>{item.conteudo || ""}</Text>
+            <Text style={styles.title} numberOfLines={2}>
+              {item.titulo || "Sem título"}
+            </Text>
+
+            <Text style={styles.subtitle} numberOfLines={2}>
+              {item.conteudo || ""}
+            </Text>
 
             <View style={styles.row}>
               <Pressable
-                onPress={() => navigation.navigate("PostForm", { mode: "edit", post: item })}
+                onPress={() =>
+                  navigation.navigate("PostForm", { mode: "edit", post: item })
+                }
                 style={styles.secondaryBtn}
               >
                 <Text style={styles.secondaryBtnText}>Editar</Text>
@@ -107,7 +125,7 @@ export default function ManagePostsScreen({ navigation }) {
           </View>
         )}
         ListEmptyComponent={
-          <Text style={{ marginTop: 16, color: "#6B7280" }}>
+          <Text style={styles.emptyText}>
             Você ainda não criou posts.
           </Text>
         }
@@ -117,19 +135,59 @@ export default function ManagePostsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#F3F4F6" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  primaryBtn: {
-    backgroundColor: "#111827",
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: colors.background,
   },
-  primaryBtnText: { color: "#fff", fontWeight: "700" },
-  card: { backgroundColor: "#fff", borderRadius: 16, padding: 14 },
-  title: { fontSize: 16, fontWeight: "800", color: "#111827" },
-  subtitle: { marginTop: 6, color: "#6B7280" },
-  row: { flexDirection: "row", gap: 10, marginTop: 12 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* ---------- BOTÃO PRINCIPAL ---------- */
+  primaryBtn: {
+    flexDirection: "row",
+    gap: 8,
+    backgroundColor: colors.accent,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    ...typography.bold,
+  },
+
+  /* ---------- CARD ---------- */
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 18,
+  },
+
+  title: {
+    fontSize: 18,
+    color: colors.accent,
+    marginBottom: 6,
+    ...typography.title,
+  },
+
+  subtitle: {
+    color: colors.muted,
+    fontSize: 14,
+    ...typography.body,
+  },
+
+  row: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+
   secondaryBtn: {
     flex: 1,
     borderWidth: 1,
@@ -137,9 +195,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     alignItems: "center",
-    backgroundColor: "#fff",
   },
-  secondaryBtnText: { fontWeight: "700", color: "#111827" },
+
+  secondaryBtnText: {
+    ...typography.bold,
+    color: colors.text,
+  },
+
   dangerBtn: {
     flex: 1,
     paddingVertical: 10,
@@ -147,5 +209,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FEE2E2",
   },
-  dangerBtnText: { fontWeight: "800", color: "#991B1B" },
+
+  dangerBtnText: {
+    ...typography.bold,
+    color: colors.danger,
+  },
+
+  emptyText: {
+    marginTop: 24,
+    textAlign: "center",
+    color: colors.muted,
+    ...typography.body,
+  },
 });
