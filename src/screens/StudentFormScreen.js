@@ -13,67 +13,105 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "../services/api";
 import { colors, typography } from "../theme";
 
-export default function ProfessorFormScreen({ route, navigation }) {
+export default function StudentFormScreen({ route, navigation }) {
   const mode = route?.params?.mode || "create";
-  const existing = route?.params?.professor || null;
+  const existing = route?.params?.student || null;
 
-  const initial = useMemo(
-    () => ({
+  const initial = useMemo(() => {
+    return {
       name: existing?.name || "",
       email: existing?.email || "",
-      password: "",
-      disciplinasText: (existing?.disciplinas || []).join(", "),
-    }),
-    [existing]
-  );
+      disciplinasText: Array.isArray(existing?.disciplinas)
+        ? existing.disciplinas.join(", ")
+        : "",
+      senha: "",
+    };
+  }, [existing]);
 
   const [name, setName] = useState(initial.name);
   const [email, setEmail] = useState(initial.email);
-  const [password, setPassword] = useState(initial.password);
   const [disciplinasText, setDisciplinasText] = useState(initial.disciplinasText);
+  const [senha, setSenha] = useState(initial.senha);
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     try {
       setSaving(true);
 
-      if (!name.trim()) {
+      const cleanName = String(name || "").trim();
+      const cleanEmail = String(email || "").trim();
+
+      if (!cleanName) {
         Alert.alert("Validação", "Nome é obrigatório.");
         return;
       }
-      if (!email.trim()) {
+
+      if (!cleanEmail) {
         Alert.alert("Validação", "Email é obrigatório.");
         return;
       }
 
-      const disciplinas = disciplinasText
+      const disciplinas = String(disciplinasText || "")
         .split(",")
         .map((d) => d.trim())
         .filter(Boolean);
 
+      if (disciplinas.length === 0) {
+        Alert.alert("Validação", "Informe pelo menos 1 disciplina.");
+        return;
+      }
+
+      // CREATE
       if (mode === "create") {
-        if (!password.trim()) {
-          Alert.alert("Validação", "Senha é obrigatória para criar professor.");
+        const cleanSenha = String(senha || "").trim();
+        if (!cleanSenha) {
+          Alert.alert("Validação", "Senha é obrigatória para criar aluno.");
           return;
         }
 
-        await api.post("/api/professores", { name, email, senha: password, disciplinas });
-      } else {
-        const id = existing?._id || existing?.id;
-        const payload = { name, email, disciplinas };
-        if (password.trim()) payload.senha = senha;
+        const payload = {
+          name: cleanName,
+          email: cleanEmail,
+          disciplinas,
+          senha: cleanSenha, // backend espera "senha"
+        };
 
-        await api.put(`/api/professores/${id}`, payload);
+        const res = await api.post("/api/alunos", payload);
+        console.log("CREATE ALUNO OK:", res?.status, res?.data);
+
+        Alert.alert("Sucesso", "Aluno criado!");
+        navigation.goBack();
+        return;
       }
 
-      Alert.alert("Sucesso", mode === "create" ? "Professor criado!" : "Professor atualizado!");
+      // EDIT
+      const id = existing?._id || existing?.id;
+      if (!id) {
+        Alert.alert("Erro", "Aluno inválido para edição.");
+        return;
+      }
+
+      const payload = {
+        name: cleanName,
+        email: cleanEmail,
+        disciplinas,
+      };
+
+      // senha opcional no edit
+      const cleanSenha = String(senha || "").trim();
+      if (cleanSenha) payload.senha = cleanSenha;
+
+      const res = await api.put(`/api/alunos/${id}`, payload);
+      console.log("UPDATE ALUNO OK:", res?.status, res?.data);
+
+      Alert.alert("Sucesso", "Aluno atualizado!");
       navigation.goBack();
     } catch (e) {
-      console.log("Erro salvar professor:", e?.response?.data || e?.message);
+      console.log("Erro salvar aluno:", e?.response?.data || e?.message);
       const msg =
         e?.response?.data?.message ||
         e?.response?.data?.error ||
-        "Não consegui salvar o professor.";
+        "Não consegui salvar o aluno.";
       Alert.alert("Erro", msg);
     } finally {
       setSaving(false);
@@ -88,7 +126,7 @@ export default function ProfessorFormScreen({ route, navigation }) {
           value={name}
           onChangeText={setName}
           style={styles.input}
-          placeholder="Nome do professor"
+          placeholder="Nome do aluno"
           placeholderTextColor={colors.muted}
         />
 
@@ -108,7 +146,7 @@ export default function ProfessorFormScreen({ route, navigation }) {
           value={disciplinasText}
           onChangeText={setDisciplinasText}
           style={styles.input}
-          placeholder="Ex: Física, Matemática"
+          placeholder="Ex: Matemática, Física"
           placeholderTextColor={colors.muted}
         />
 
@@ -116,25 +154,33 @@ export default function ProfessorFormScreen({ route, navigation }) {
           {mode === "create" ? "Senha" : "Senha (opcional)"}
         </Text>
         <TextInput
-          value={password}
-          onChangeText={setPassword}
+          value={senha}
+          onChangeText={setSenha}
           secureTextEntry
           style={styles.input}
           placeholder={mode === "create" ? "Crie uma senha" : "Deixe vazio para manter"}
           placeholderTextColor={colors.muted}
         />
 
-        <Pressable onPress={handleSave} style={styles.primaryBtn} disabled={saving}>
+        <Pressable
+          onPress={handleSave}
+          style={[styles.primaryBtn, saving && { opacity: 0.7 }]}
+          disabled={saving}
+        >
           {saving ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <>
               <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
               <Text style={styles.primaryBtnText}>
-                {mode === "create" ? "Criar" : "Salvar"}
+                {mode === "create" ? "Criar aluno" : "Salvar alterações"}
               </Text>
             </>
           )}
+        </Pressable>
+
+        <Pressable onPress={() => navigation.goBack()} style={styles.ghostBtn}>
+          <Text style={styles.ghostBtnText}>Cancelar</Text>
         </Pressable>
       </View>
     </View>
@@ -151,7 +197,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  label: { color: colors.text, fontSize: 13, ...typography.bold },
+  label: {
+    color: colors.text,
+    fontSize: 13,
+    ...typography.bold,
+  },
+
   input: {
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -172,5 +223,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-  primaryBtnText: { color: "#fff", fontSize: 16, ...typography.bold },
+
+  primaryBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    ...typography.bold,
+  },
+
+  ghostBtn: {
+    marginTop: 6,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.border ?? "#E5E7EB",
+    backgroundColor: colors.surface,
+  },
+
+  ghostBtnText: {
+    color: colors.text,
+    ...typography.bold,
+  },
 });

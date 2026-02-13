@@ -1,23 +1,32 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { View, ActivityIndicator } from "react-native";
-import AppTabs from "./AppTabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
 import { useAuth } from "../context/AuthContext";
+import AppTabs from "./AppTabs";
+import LoginScreen from "../screens/LoginScreen";
+import LoadingCenter from "../components/LoadingCenter";
+
+const Stack = createNativeStackNavigator();
 
 export default function RootNavigator() {
-  const { loadingAuth } = useAuth();
+  const { isLogged, loadingAuth } = useAuth();
 
   if (loadingAuth) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
-      </View>
-    );
+    return <LoadingCenter />;
   }
 
   return (
     <NavigationContainer>
-      <AppTabs />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!isLogged ? (
+          // se não estiver logado, mostra a tela de login
+          <Stack.Screen name="Login" component={LoginScreen} />
+        ) : (
+          // se estiver logado, mostra as telas do app
+          <Stack.Screen name="App" component={AppTabs} />
+        )}
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }
