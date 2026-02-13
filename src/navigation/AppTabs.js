@@ -6,6 +6,7 @@ import PostsStack from "./PostsStack";
 import ManageStack from "./ManageStack";
 import LoginScreen from "../screens/LoginScreen";
 import AdminScreen from "../screens/AdminScreen";
+import AdminStack from "./AdminStack";
 import { useAuth } from "../context/AuthContext";
 
 const Tab = createBottomTabNavigator();
@@ -53,7 +54,7 @@ export default function AppTabs() {
           />
           <Tab.Screen
             name="AdminTab"
-            component={AdminScreen}
+            component={AdminStack}
             options={{ title: "Admin" }}
           />
         </>
