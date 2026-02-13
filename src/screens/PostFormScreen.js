@@ -1,8 +1,19 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, TextInput, Pressable, Alert, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  Alert,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import LoadingCenter from "../components/LoadingCenter";
+import { colors, typography } from "../theme";
 
 export default function PostFormScreen({ route, navigation }) {
   const { professor, loadingAuth } = useAuth();
@@ -26,7 +37,6 @@ export default function PostFormScreen({ route, navigation }) {
   const [tagsText, setTagsText] = useState(initial.tagsText);
   const [saving, setSaving] = useState(false);
 
-  // enquanto o auth carrega, mostra loader
   if (loadingAuth) return <LoadingCenter />;
 
   async function handleSave() {
@@ -53,28 +63,19 @@ export default function PostFormScreen({ route, navigation }) {
         autor: professorId,
       };
 
+      let res;
       if (mode === "edit" && existing?._id) {
-        await api.put(`/api/posts/${existing._id}`, payload);
+        res = await api.put(`/api/posts/${existing._id}`, payload);
       } else {
-        await api.post("/api/posts", payload);
-        let res;
-
-        if (mode === "edit" && existing?._id) {
-          res = await api.put(`/api/posts/${existing._id}`, payload);
-        } else {
-          res = await api.post("/api/posts", payload);
-        }
-
-        console.log("SAVE OK:", res?.status, res?.data);
-        Alert.alert("Sucesso", "Post salvo!");
-        navigation.goBack();
-
+        res = await api.post("/api/posts", payload);
       }
 
+      console.log("SAVE OK:", res?.status, res?.data);
+      Alert.alert("Sucesso", "Post salvo!");
       navigation.goBack();
     } catch (e) {
       console.log("Erro save:", e?.response?.data || e?.message);
-      Alert.alert("Erro", "Não consegui salvar o post.");
+      Alert.alert("Erro", "Não foi possível salvar o post.");
     } finally {
       setSaving(false);
     }
@@ -82,33 +83,79 @@ export default function PostFormScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Professor</Text>
-      <TextInput
-        value={professor?.name || professor?.email || ""}
-        editable={false}
-        style={[styles.input, styles.disabledInput]}
-      />
+      {/* Header mini */}
+      <View style={styles.headerRow}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={12} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+          <Text style={styles.backText}>Voltar</Text>
+        </Pressable>
 
-      <Text style={styles.label}>Título</Text>
-      <TextInput value={titulo} onChangeText={setTitulo} style={styles.input} />
+        <Text style={styles.headerTitle}>
+          {mode === "edit" ? "Editar post" : "Novo post"}
+        </Text>
 
-      <Text style={styles.label}>Matéria</Text>
-      <TextInput value={materia} onChangeText={setMateria} style={styles.input} />
+        <View style={{ width: 72 }} />
+      </View>
 
-      <Text style={styles.label}>Tags (separadas por vírgula)</Text>
-      <TextInput value={tagsText} onChangeText={setTagsText} style={styles.input} />
+      {/* Card do form */}
+      <View style={styles.card}>
+        <Text style={styles.label}>Professor</Text>
+        <TextInput
+          value={professor?.name || professor?.email || ""}
+          editable={false}
+          style={[styles.input, styles.disabledInput]}
+        />
 
-      <Text style={styles.label}>Conteúdo</Text>
-      <TextInput
-        value={conteudo}
-        onChangeText={setConteudo}
-        style={[styles.input, styles.textarea]}
-        multiline
-      />
+        <Text style={styles.label}>Título</Text>
+        <TextInput
+          value={titulo}
+          onChangeText={setTitulo}
+          style={styles.input}
+          placeholder="Digite o título"
+          placeholderTextColor={colors.muted}
+        />
 
-      <Pressable onPress={handleSave} style={styles.primaryBtn} disabled={saving}>
-        <Text style={styles.primaryBtnText}>{saving ? "Salvando..." : "Salvar"}</Text>
-      </Pressable>
+        <Text style={styles.label}>Disciplina</Text>
+        <TextInput
+          value={materia}
+          onChangeText={setMateria}
+          style={styles.input}
+          placeholderTextColor={colors.muted}
+        />
+
+        <Text style={styles.label}>Tags (separadas por vírgula)</Text>
+        <TextInput
+          value={tagsText}
+          onChangeText={setTagsText}
+          style={styles.input}
+          placeholderTextColor={colors.muted}
+        />
+
+        <Text style={styles.label}>Conteúdo</Text>
+        <TextInput
+          value={conteudo}
+          onChangeText={setConteudo}
+          style={[styles.input, styles.textarea]}
+          multiline
+          placeholder="Escreva o conteúdo do post..."
+          placeholderTextColor={colors.muted}
+        />
+
+        <Pressable
+          onPress={handleSave}
+          style={[styles.primaryBtn, saving && { opacity: 0.8 }]}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+              <Text style={styles.primaryBtnText}>Salvar</Text>
+            </>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -116,39 +163,81 @@ export default function PostFormScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: "#F3F4F6",
+    padding: 20,
+    backgroundColor: colors.background,
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    width: 72,
+  },
+  backText: {
+    color: colors.text,
+    fontSize: 14,
+    ...typography.bold,
+  },
+  headerTitle: {
+    color: colors.muted,
+    fontSize: 14,
+    ...typography.bold,
+  },
+
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 18,
     gap: 10,
   },
+
   label: {
-    fontWeight: "700",
-    color: "#111827",
-    marginTop: 6,
+    marginTop: 2,
+    color: colors.text,
+    fontSize: 13,
+    ...typography.bold,
   },
+
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: colors.border ?? "#E5E7EB",
+    color: colors.text,
+    ...typography.body,
   },
+
   disabledInput: {
     backgroundColor: "#E5E7EB",
-    color: "#6B7280",
+    color: colors.muted,
   },
+
   textarea: {
     height: 180,
     textAlignVertical: "top",
   },
+
   primaryBtn: {
-    marginTop: 12,
-    backgroundColor: "#111827",
-    paddingVertical: 12,
-    borderRadius: 12,
+    marginTop: 10,
+    backgroundColor: colors.accent,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
   },
+
   primaryBtnText: {
     color: "#fff",
-    fontWeight: "800",
+    fontSize: 16,
+    ...typography.bold,
   },
 });
